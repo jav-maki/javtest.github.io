@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilot Training PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #map { height: 300px; width: 100%; background-color: #ccc; margin-bottom: 20px; }
+        button { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Pilot Training App</h1>
+    <div id="map">Map Placeholder</div>
+    <div id="gps-data">
+        <p>Latitude: <span id="latitude">-</span></p>
+        <p>Longitude: <span id="longitude">-</span></p>
+        <p>Altitude: <span id="altitude">-</span> m</p>
+        <p>Speed: <span id="speed">-</span> km/h</p>
+        <p>Heading: <span id="heading">-</span>°</p>
+    </div>
+    <button id="add-area">Add Training Area</button>
+    <ul id="training-areas"></ul>
+
+    <script>
+        // Service Workerの登録
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(function(registration) {
+                console.log('ServiceWorker registration successful');
+            }).catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        }
+
+        // GPS データの取得と表示
+        function updateGPSData() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.watchPosition(function(position) {
+                    document.getElementById('latitude').textContent = position.coords.latitude.toFixed(6);
+                    document.getElementById('longitude').textContent = position.coords.longitude.toFixed(6);
+                    document.getElementById('altitude').textContent = position.coords.altitude ? position.coords.altitude.toFixed(2) : 'N/A';
+                    document.getElementById('speed').textContent = position.coords.speed ? (position.coords.speed * 3.6).toFixed(2) : 'N/A';
+                    document.getElementById('heading').textContent = position.coords.heading ? position.coords.heading.toFixed(2) : 'N/A';
+                }, function(error) {
+                    console.error('Error getting location:', error);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0
+                });
+            } else {
+                console.log('Geolocation is not supported by this browser.');
+            }
+        }
+
+        // 訓練エリアの追加
+        document.getElementById('add-area').addEventListener('click', function() {
+            const lat = document.getElementById('latitude').textContent;
+            const lon = document.getElementById('longitude').textContent;
+            const areaList = document.getElementById('training-areas');
+            const newArea = document.createElement('li');
+            newArea.textContent = `Area ${areaList.children.length + 1}: (${lat}, ${lon})`;
+            areaList.appendChild(newArea);
+
+            // ローカルストレージに保存
+            const areas = JSON.parse(localStorage.getItem('trainingAreas') || '[]');
+            areas.push({ lat, lon });
+            localStorage.setItem('trainingAreas', JSON.stringify(areas));
+        });
+
+        // 保存された訓練エリアの読み込み
+        function loadTrainingAreas() {
+            const areas = JSON.parse(localStorage.getItem('trainingAreas') || '[]');
+            const areaList = document.getElementById('training-areas');
+            areas.forEach((area, index) => {
+                const newArea = document.createElement('li');
+                newArea.textContent = `Area ${index + 1}: (${area.lat}, ${area.lon})`;
+                areaList.appendChild(newArea);
+            });
+        }
+
+        // アプリケーションの初期化
+        updateGPSData();
+        loadTrainingAreas();
+    </script>
+</body>
+</html>
